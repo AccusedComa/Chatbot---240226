@@ -3,7 +3,6 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import authRoutes from "./src/server/routes/auth";
-import whatsappRoutes from "./src/server/routes/whatsapp";
 
 console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Unset');
 
@@ -26,7 +25,6 @@ async function startServer() {
   app.use('/api/auth', authRoutes);
   app.use('/api/chat', chatRoutes);
   app.use('/api/admin', adminRoutes);
-  app.use('/api/whatsapp', whatsappRoutes);
 
   // Global Error Handler
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -40,7 +38,7 @@ async function startServer() {
     // For now, we'll serve a placeholder or redirect to the dev server's asset if possible.
     // In production, this would serve the built JS from dist.
     res.type('application/javascript');
-    res.send(`console.log("Widget loaded");`);
+    res.send(`console.log("Widget loaded");`); 
   });
 
   // Vite middleware for development
