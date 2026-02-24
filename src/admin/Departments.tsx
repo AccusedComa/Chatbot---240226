@@ -45,15 +45,18 @@ export default function Departments() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir este departamento?')) return;
+    // if (!confirm('Tem certeza que deseja excluir este departamento?')) return;
     
     try {
-      await fetch(`/api/admin/departments/${id}`, {
+      console.log('Deleting department:', id);
+      const res = await fetch(`/api/admin/departments/${id}`, {
         method: 'DELETE',
       });
+      if (!res.ok) throw new Error('Failed to delete');
       fetchDepartments();
     } catch (err) {
       console.error(err);
+      alert('Erro ao excluir departamento');
     }
   };
 
@@ -122,7 +125,7 @@ export default function Departments() {
           <tbody>
             {departments.map((dept) => (
               <tr key={dept.id} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="p-4 text-gray-500">#{dept.display_order}</td>
+                <td className="p-4 text-gray-500">#{dept.display_order} <span className="text-xs text-gray-300">({dept.id})</span></td>
                 <td className="p-4 text-2xl">{dept.icon}</td>
                 <td className="p-4 font-medium text-gray-800">{dept.name}</td>
                 <td className="p-4">
@@ -136,8 +139,13 @@ export default function Departments() {
                 </td>
                 <td className="p-4 text-right">
                   <button 
-                    onClick={() => handleDelete(dept.id)}
-                    className="text-red-400 hover:text-red-600 p-2"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(dept.id);
+                    }}
+                    className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
+                    title="Excluir departamento"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

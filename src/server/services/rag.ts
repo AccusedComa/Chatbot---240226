@@ -17,6 +17,9 @@ export class RagService {
   
   // Generate embedding for a text
   async generateEmbedding(text: string): Promise<number[]> {
+    const currentKey = getApiKey();
+    const ai = currentKey ? new GoogleGenAI({ apiKey: currentKey }) : null;
+
     if (!ai) {
       console.warn("GEMINI_API_KEY not set. Skipping embedding generation.");
       return []; // Return empty or throw specific error
@@ -24,7 +27,7 @@ export class RagService {
     try {
       const result = await ai.models.embedContent({
         model: "text-embedding-004",
-        contents: [{ parts: [{ text }] }]
+        contents: { parts: [{ text }] }
       } as any); 
       
       if (!result.embeddings || result.embeddings.length === 0) {
@@ -89,7 +92,8 @@ export class RagService {
 
   // Ingest a document (text content)
   async ingestDocument(filename: string, content: string) {
-    if (!ai) throw new Error("GEMINI_API_KEY is missing. Cannot ingest documents.");
+    const currentKey = getApiKey();
+    if (!currentKey) throw new Error("GEMINI_API_KEY is missing. Cannot ingest documents.");
 
     // 1. Chunking (Simple paragraph/length based)
     const chunks = this.chunkText(content, 1000); // ~1000 chars per chunk

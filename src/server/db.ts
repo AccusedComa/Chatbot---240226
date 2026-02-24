@@ -52,6 +52,11 @@ try {
       embedding BLOB, -- Store as JSON string or binary blob
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
     
     -- Seed initial user (admin/admin) - In production use hashed passwords!
     INSERT OR IGNORE INTO users (username, password_hash) VALUES ('admin', 'admin');

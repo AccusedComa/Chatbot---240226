@@ -43,6 +43,27 @@ router.get('/sessions', (req, res) => {
   res.json(sessions);
 });
 
+router.get('/settings', (req, res) => {
+  const settings = db.prepare('SELECT * FROM app_settings').all();
+  const settingsMap: any = {};
+  settings.forEach((s: any) => settingsMap[s.key] = s.value);
+  
+  // Mask API Key for security
+  if (settingsMap.gemini_api_key) {
+    settingsMap.gemini_api_key = '********' + settingsMap.gemini_api_key.slice(-4);
+  }
+  
+  res.json(settingsMap);
+});
+
+router.post('/settings', (req, res) => {
+  const { key, value } = req.body;
+  if (!key || !value) return res.status(400).json({ error: 'Key and value required' });
+  
+  db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run(key, value);
+  res.json({ success: true });
+});
+
 // RAG Upload Endpoint
 router.post('/rag/upload', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });

@@ -15,3 +15,5 @@
 - **New Pages:** Added `Chats` (session history), `Departments` (CRUD), and `Settings` pages.
 - **Data Seeding:** Added `seed_data.ts` to populate database with initial demo data.
 - **Departments:** Implemented delete functionality and fixed duplication issue by adding UNIQUE index.
+- **Settings:** Added UI to configure Gemini API Key and upload RAG documents.
+- **Backend:** Updated `RagService` and `ChatRoute` to support dynamic API Key from database (`app_settings` table).

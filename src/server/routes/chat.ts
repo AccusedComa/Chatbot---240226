@@ -5,9 +5,18 @@ import { ragService } from '../services/rag';
 import { GoogleGenAI } from "@google/genai";
 
 const router = express.Router();
-const apiKey = process.env.GEMINI_API_KEY;
-const isValidKey = apiKey && apiKey !== 'MY_GEMINI_API_KEY';
-const ai = isValidKey ? new GoogleGenAI({ apiKey }) : null;
+
+const getApiKey = () => {
+  const envKey = process.env.GEMINI_API_KEY;
+  if (envKey && envKey !== 'MY_GEMINI_API_KEY') return envKey;
+  
+  try {
+    const setting = db.prepare("SELECT value FROM app_settings WHERE key = 'gemini_api_key'").get() as { value: string };
+    return setting?.value;
+  } catch (e) {
+    return null;
+  }
+};
 
 // Create session
 router.post('/session', (req, res) => {
@@ -69,6 +78,9 @@ router.post('/message', async (req, res) => {
          const relevantDocs = await ragService.search(message);
          const context = relevantDocs.map(d => d.content).join('\n\n');
          
+         const currentKey = getApiKey();
+         const ai = currentKey ? new GoogleGenAI({ apiKey: currentKey }) : null;
+
          if (!ai) {
             botResponse = "Desculpe, o sistema de IA não está configurado no momento. (API Key missing)";
          } else {
@@ -86,7 +98,10 @@ router.post('/message', async (req, res) => {
              try {
                 const result = await ai.models.generateContent({
                   model: "gemini-2.5-flash-latest",
-                  contents: [{ role: 'user', parts: [{ text: prompt }] }]
+                  contents: {
+                    role: 'user',
+                    parts: [{ text: prompt }]
+                  }
                 });
                 botResponse = result.text || "Desculpe, não consegui gerar uma resposta.";
              } catch (aiError) {
@@ -105,6 +120,9 @@ router.post('/message', async (req, res) => {
            const relevantDocs = await ragService.search(message);
            const context = relevantDocs.map(d => d.content).join('\n\n');
            
+           const currentKey = getApiKey();
+           const ai = currentKey ? new GoogleGenAI({ apiKey: currentKey }) : null;
+
            if (!ai) {
                botResponse = `Entendi: "${message}". (IA indisponível no momento)`;
            } else {
@@ -116,7 +134,10 @@ router.post('/message', async (req, res) => {
                try {
                   const result = await ai.models.generateContent({
                     model: "gemini-2.5-flash-latest",
-                    contents: [{ role: 'user', parts: [{ text: prompt }] }]
+                    contents: {
+                      role: 'user',
+                      parts: [{ text: prompt }]
+                    }
                   });
                   botResponse = result.text || `Entendi: "${message}". (IA indisponível no momento)`;
                } catch (aiError) {
