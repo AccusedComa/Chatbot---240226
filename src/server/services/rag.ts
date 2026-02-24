@@ -1,10 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 import db from '../db';
+import { getApiKey } from '../config';
 
 // Initialize Gemini
-const apiKey = process.env.GEMINI_API_KEY;
-const isValidKey = apiKey && apiKey !== 'MY_GEMINI_API_KEY';
-const ai = isValidKey ? new GoogleGenAI({ apiKey }) : null;
+const apiKey = getApiKey();
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 interface DocumentChunk {
   id: number;
@@ -14,7 +14,7 @@ interface DocumentChunk {
 }
 
 export class RagService {
-  
+
   // Generate embedding for a text
   async generateEmbedding(text: string): Promise<number[]> {
     const currentKey = getApiKey();
@@ -27,11 +27,11 @@ export class RagService {
     try {
       const result = await ai.models.embedContent({
         model: "text-embedding-004",
-        contents: { parts: [{ text }] }
-      } as any); 
-      
+        contents: [{ parts: [{ text }] }]
+      } as any);
+
       if (!result.embeddings || result.embeddings.length === 0) {
-         throw new Error("No embedding returned");
+        throw new Error("No embedding returned");
       }
       return result.embeddings[0].values;
     } catch (error) {
@@ -58,21 +58,21 @@ export class RagService {
   async search(query: string, limit: number = 3): Promise<DocumentChunk[]> {
     try {
       const queryEmbedding = await this.generateEmbedding(query);
-      
+
       if (queryEmbedding.length === 0) return [];
 
       // Fetch all documents (Naive approach for MVP - acceptable for < 10k chunks)
       const docs = db.prepare('SELECT * FROM documents').all() as any[];
-      
+
       const scoredDocs = docs.map(doc => {
         let embedding: number[] = [];
         try {
-            embedding = JSON.parse(doc.embedding);
+          embedding = JSON.parse(doc.embedding);
         } catch (e) {
-            console.error("Error parsing embedding for doc", doc.id);
-            return { ...doc, embedding: [], score: 0 };
+          console.error("Error parsing embedding for doc", doc.id);
+          return { ...doc, embedding: [], score: 0 };
         }
-        
+
         return {
           ...doc,
           embedding,
