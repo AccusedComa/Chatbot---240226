@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "stack": {
+    "frontend": "React + Vite + Tailwind CSS",
+    "backend": "Node.js + Express",
+    "database": "better-sqlite3 (SQLite)",
+    "ai_provider": "Gemini (@google/genai)",
+    "vector_store": "SQLite (Custom implementation)"
+  },
+  "modules": {
+    "admin": "/src/admin",
+    "widget": "/src/widget",
+    "server": "/src/server"
+  },
+  "routes": {
+    "api_auth": "/api/admin/login",
+    "api_chat": "/api/chat/*",
+    "api_config": "/api/config/*"
+  },
+  "env_vars": [
+    "GEMINI_API_KEY",
+    "APP_URL",
+    "ADMIN_PASSWORD",
+    "JWT_SECRET"
+  ],
+  "features": {
+    "widget_ui": "done",
+    "backend_auth": "done",
+    "chat_flow": "done",
+    "rag_system": "done (basic)",
+    "whatsapp_integration": "pending",
+    "stats": "partial"
+  },
+  "whatsapp": {
+    "status": "disconnected",
+    "provider": "mock/placeholder (TBD)"
+  }
+}
