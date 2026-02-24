@@ -39,6 +39,7 @@ try {
       name TEXT NOT NULL,
       icon TEXT,
       type TEXT CHECK(type IN ('ai', 'human', 'hybrid')) DEFAULT 'ai',
+      phone TEXT,
       prompt TEXT,
       display_order INTEGER DEFAULT 0
     );

@@ -1,10 +1,9 @@
 # Histórico de Conversas
 
-## 2026-02-24 - Configurações e RAG Dinâmico
-**Pedido:** Acessar configurações, configurar API Key e habilitar RAG com uploads.
+## 2026-02-24 - Melhoria Departamentos (Telefone)
+**Pedido:** Adicionar opção de telefone quando o departamento for humano.
 **Ação:**
-- Criada tabela `app_settings` no SQLite para armazenar configurações dinâmicas.
-- Atualizado `Settings.tsx` com formulário para salvar API Key e área de upload de documentos.
-- Refatorado backend (`rag.ts`, `chat.ts`) para ler a chave do banco se não estiver no `.env`.
-- Adicionados endpoints `/api/admin/settings` para leitura e escrita de configurações.
-**Status:** Usuário pode configurar a IA diretamente pelo painel admin sem reiniciar o servidor.
+- Adicionada coluna `phone` na tabela `departments` (`src/server/db.ts`).
+- Atualizado endpoint `POST /departments` para receber o telefone.
+- Atualizado frontend `Departments.tsx` para exibir input condicional e mostrar o telefone na lista.
+**Status:** Cadastro de departamentos humanos agora suporta contato telefônico.

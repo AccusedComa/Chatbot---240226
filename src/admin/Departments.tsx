@@ -6,13 +6,14 @@ interface Department {
   name: string;
   icon: string;
   type: 'ai' | 'human' | 'hybrid';
+  phone?: string;
   display_order: number;
 }
 
 export default function Departments() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newDept, setNewDept] = useState({ name: '', icon: '', type: 'ai' });
+  const [newDept, setNewDept] = useState({ name: '', icon: '', type: 'ai', phone: '' });
 
   useEffect(() => {
     fetchDepartments();
@@ -37,7 +38,7 @@ export default function Departments() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newDept)
       });
-      setNewDept({ name: '', icon: '', type: 'ai' });
+      setNewDept({ name: '', icon: '', type: 'ai', phone: '' });
       fetchDepartments();
     } catch (err) {
       console.error(err);
@@ -102,6 +103,20 @@ export default function Departments() {
               <option value="hybrid">Híbrido</option>
             </select>
           </div>
+          
+          {(newDept.type === 'human' || newDept.type === 'hybrid') && (
+            <div className="w-48 animate-in fade-in slide-in-from-left-4 duration-300">
+              <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+              <input 
+                type="text" 
+                className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                placeholder="Ex: 11999999999"
+                value={newDept.phone}
+                onChange={e => setNewDept({...newDept, phone: e.target.value})}
+              />
+            </div>
+          )}
+
           <button 
             onClick={handleAdd}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
@@ -127,7 +142,10 @@ export default function Departments() {
               <tr key={dept.id} className="border-b border-gray-50 hover:bg-gray-50">
                 <td className="p-4 text-gray-500">#{dept.display_order} <span className="text-xs text-gray-300">({dept.id})</span></td>
                 <td className="p-4 text-2xl">{dept.icon}</td>
-                <td className="p-4 font-medium text-gray-800">{dept.name}</td>
+                <td className="p-4 font-medium text-gray-800">
+                  {dept.name}
+                  {dept.phone && <div className="text-xs text-gray-400 font-normal mt-0.5">📞 {dept.phone}</div>}
+                </td>
                 <td className="p-4">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     dept.type === 'ai' ? 'bg-purple-100 text-purple-700' :

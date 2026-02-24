@@ -16,8 +16,8 @@ router.get('/departments', (req, res) => {
 });
 
 router.post('/departments', (req, res) => {
-  const { name, icon, type } = req.body;
-  db.prepare('INSERT INTO departments (name, icon, type) VALUES (?, ?, ?)').run(name, icon, type);
+  const { name, icon, type, phone } = req.body;
+  db.prepare('INSERT INTO departments (name, icon, type, phone) VALUES (?, ?, ?, ?)').run(name, icon, type, phone);
   res.json({ success: true });
 });
 

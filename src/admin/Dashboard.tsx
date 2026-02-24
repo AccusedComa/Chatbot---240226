@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart, Users, MessageSquare, Upload, FileText } from 'lucide-react';
+import { BarChart, Users, MessageSquare, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ sessions: 0, messages: 0, documents: 0 });
-  const [uploading, setUploading] = useState(false);
-  const [uploadMsg, setUploadMsg] = useState('');
 
   useEffect(() => {
     fetch('/api/admin/stats')
@@ -14,39 +12,6 @@ export default function Dashboard() {
       .then(data => setStats(data))
       .catch(err => console.error(err));
   }, []);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-
-    setUploading(true);
-    setUploadMsg('');
-
-    try {
-      const res = await fetch('/api/admin/rag/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await res.json();
-      if (res.ok) {
-        setUploadMsg(`Sucesso: ${data.message}`);
-        // Refresh stats
-        fetch('/api/admin/stats')
-          .then(res => res.json())
-          .then(data => setStats(data));
-      } else {
-        setUploadMsg(`Erro: ${data.error}`);
-      }
-    } catch (err) {
-      setUploadMsg('Erro ao enviar arquivo.');
-    } finally {
-      setUploading(false);
-    }
-  };
 
   return (
     <div>
@@ -90,28 +55,6 @@ export default function Dashboard() {
             </div>
             <p className="text-3xl font-bold text-gray-800">{stats.documents}</p>
             <span className="text-purple-500 text-sm font-medium">Base de conhecimento</span>
-          </div>
-        </div>
-
-        {/* RAG Upload Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Base de Conhecimento (RAG)</h3>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition">
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">Arraste e solte arquivos PDF ou TXT aqui</p>
-            <p className="text-gray-400 text-sm mb-4">ou</p>
-            <label className="bg-blue-600 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition">
-              Selecionar Arquivo
-              <input 
-                type="file" 
-                className="hidden" 
-                accept=".pdf,.txt"
-                onChange={handleFileUpload}
-                disabled={uploading}
-              />
-            </label>
-            {uploading && <p className="mt-4 text-blue-600">Enviando e processando...</p>}
-            {uploadMsg && <p className={`mt-4 ${uploadMsg.startsWith('Erro') ? 'text-red-600' : 'text-green-600'}`}>{uploadMsg}</p>}
           </div>
         </div>
 
