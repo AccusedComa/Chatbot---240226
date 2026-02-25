@@ -1,8 +1,8 @@
 import express from 'express';
-import db from '../db.ts';
+import db from '../db';
 import multer from 'multer';
 import { createRequire } from 'module';
-import { ragService } from '../services/rag.ts';
+import { ragService } from '../services/rag';
 
 const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
@@ -10,21 +10,33 @@ const pdfParse = require('pdf-parse');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+// ─── Auth Middleware ────────────────────────────────────────────────────────
+router.use((req, res, next) => {
+  const auth = req.headers['authorization'];
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+});
+
+// ─── Departments ────────────────────────────────────────────────────────────
 router.get('/departments', (req, res) => {
   const depts = db.prepare('SELECT * FROM departments ORDER BY display_order ASC').all();
   res.json(depts);
 });
 
 router.post('/departments', (req, res) => {
-  const { name, icon, type, phone } = req.body;
-  db.prepare('INSERT INTO departments (name, icon, type, phone) VALUES (?, ?, ?, ?)').run(name, icon, type, phone);
+  const { name, icon, type, phone, prompt } = req.body;
+  db.prepare('INSERT INTO departments (name, icon, type, phone, prompt) VALUES (?, ?, ?, ?, ?)')
+    .run(name, icon, type, phone || null, prompt || null);
   res.json({ success: true });
 });
 
 router.put('/departments/:id', (req, res) => {
   const { id } = req.params;
-  const { name, icon, type, phone } = req.body;
-  db.prepare('UPDATE departments SET name = ?, icon = ?, type = ?, phone = ? WHERE id = ?').run(name, icon, type, phone, id);
+  const { name, icon, type, phone, prompt } = req.body;
+  db.prepare('UPDATE departments SET name = ?, icon = ?, type = ?, phone = ?, prompt = ? WHERE id = ?')
+    .run(name, icon, type, phone || null, prompt || null, id);
   res.json({ success: true });
 });
 
@@ -34,6 +46,7 @@ router.delete('/departments/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// ─── Stats ──────────────────────────────────────────────────────────────────
 router.get('/stats', (req, res) => {
   const sessionCount = db.prepare('SELECT COUNT(*) as count FROM sessions').get() as any;
   const messageCount = db.prepare('SELECT COUNT(*) as count FROM messages').get() as any;
@@ -45,39 +58,43 @@ router.get('/stats', (req, res) => {
   });
 });
 
+// ─── Sessions ───────────────────────────────────────────────────────────────
 router.get('/sessions', (req, res) => {
   const sessions = db.prepare('SELECT * FROM sessions ORDER BY created_at DESC').all();
   res.json(sessions);
 });
 
+// ─── Settings ───────────────────────────────────────────────────────────────
 router.get('/settings', (req, res) => {
   const settings = db.prepare('SELECT * FROM app_settings').all();
   const settingsMap: any = {};
   settings.forEach((s: any) => settingsMap[s.key] = s.value);
-  
-  // Mask API Key for security
+
+  // Mask API keys for security
   if (settingsMap.gemini_api_key) {
-    settingsMap.gemini_api_key = '********' + settingsMap.gemini_api_key.slice(-4);
+    settingsMap.gemini_api_key = '••••••••' + settingsMap.gemini_api_key.slice(-4);
   }
-  
+  if (settingsMap.groq_api_key) {
+    settingsMap.groq_api_key = '••••••••' + settingsMap.groq_api_key.slice(-4);
+  }
+
   res.json(settingsMap);
 });
 
 router.post('/settings', (req, res) => {
   const { key, value } = req.body;
   if (!key || !value) return res.status(400).json({ error: 'Key and value required' });
-  
   db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run(key, value);
   res.json({ success: true });
 });
 
-// RAG Upload Endpoint
+// ─── RAG Upload ─────────────────────────────────────────────────────────────
 router.post('/rag/upload', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   try {
     let content = '';
-    
+
     if (req.file.mimetype === 'application/pdf') {
       const data = await pdfParse(req.file.buffer);
       content = data.text;
@@ -92,12 +109,12 @@ router.post('/rag/upload', upload.single('file'), async (req, res) => {
     }
 
     await ragService.ingestDocument(req.file.originalname, content);
-    
+
     res.json({ success: true, message: `File ${req.file.originalname} processed successfully.` });
   } catch (err: any) {
     console.error('Upload error:', err);
-    if (err.message.includes('GEMINI_API_KEY is missing')) {
-        return res.status(503).json({ error: 'Sistema de IA não configurado (API Key missing).' });
+    if (err.message?.includes('GEMINI_API_KEY is missing')) {
+      return res.status(503).json({ error: 'Sistema de IA não configurado (API Key missing).' });
     }
     res.status(500).json({ error: err.message });
   }
