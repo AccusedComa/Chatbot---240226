@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, User, Calendar } from 'lucide-react';
+import { apiFetch } from './api';
 
 interface Session {
   id: number;
@@ -23,7 +24,7 @@ export default function Chats() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin/sessions')
+    apiFetch('/api/admin/sessions')
       .then(res => res.json())
       .then(data => {
         setSessions(data);
@@ -50,7 +51,7 @@ export default function Chats() {
         </div>
         <div className="flex-1 overflow-y-auto">
           {sessions.map(session => (
-            <div 
+            <div
               key={session.session_id}
               onClick={() => setSelectedSession(session.session_id)}
               className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${selectedSession === session.session_id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
@@ -86,11 +87,10 @@ export default function Chats() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.map(msg => (
                 <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[70%] rounded-lg p-3 ${
-                    msg.sender === 'user' 
-                      ? 'bg-blue-600 text-white rounded-tr-none' 
+                  <div className={`max-w-[70%] rounded-lg p-3 ${msg.sender === 'user'
+                      ? 'bg-blue-600 text-white rounded-tr-none'
                       : 'bg-gray-100 text-gray-800 rounded-tl-none'
-                  }`}>
+                    }`}>
                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     <span className={`text-[10px] block mt-1 ${msg.sender === 'user' ? 'text-blue-200' : 'text-gray-400'}`}>
                       {new Date(msg.timestamp).toLocaleTimeString()}

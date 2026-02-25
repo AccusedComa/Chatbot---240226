@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Trash2, Plus, Save, Pencil, X } from 'lucide-react';
+import { apiFetch } from './api';
 
 interface Department {
   id: number;
@@ -7,13 +8,14 @@ interface Department {
   icon: string;
   type: 'ai' | 'human' | 'hybrid';
   phone?: string;
+  prompt?: string;
   display_order: number;
 }
 
 export default function Departments() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({ name: '', icon: '', type: 'ai', phone: '' });
+  const [formData, setFormData] = useState({ name: '', icon: '', type: 'ai', phone: '', prompt: '' });
   const [editingId, setEditingId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -21,7 +23,7 @@ export default function Departments() {
   }, []);
 
   const fetchDepartments = () => {
-    fetch('/api/admin/departments')
+    apiFetch('/api/admin/departments')
       .then(res => res.json())
       .then(data => {
         setDepartments(data);
@@ -34,18 +36,17 @@ export default function Departments() {
     if (!formData.name) return;
 
     try {
-      const url = editingId 
+      const url = editingId
         ? `/api/admin/departments/${editingId}`
         : '/api/admin/departments';
-      
+
       const method = editingId ? 'PUT' : 'POST';
 
-      await fetch(url, {
+      await apiFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      
+
       resetForm();
       fetchDepartments();
     } catch (err) {
@@ -59,21 +60,19 @@ export default function Departments() {
       name: dept.name,
       icon: dept.icon,
       type: dept.type as any,
-      phone: dept.phone || ''
+      phone: dept.phone || '',
+      prompt: dept.prompt || ''
     });
   };
 
   const resetForm = () => {
     setEditingId(null);
-    setFormData({ name: '', icon: '', type: 'ai', phone: '' });
+    setFormData({ name: '', icon: '', type: 'ai', phone: '', prompt: '' });
   };
 
   const handleDelete = async (id: number) => {
-    // if (!confirm('Tem certeza que deseja excluir este departamento?')) return;
-    
     try {
-      console.log('Deleting department:', id);
-      const res = await fetch(`/api/admin/departments/${id}`, {
+      const res = await apiFetch(`/api/admin/departments/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete');
@@ -93,75 +92,90 @@ export default function Departments() {
 
       <div className={`bg-white rounded-xl shadow-sm border p-6 mb-8 transition-colors ${editingId ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}>
         <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-800">
-                {editingId ? 'Editar Departamento' : 'Adicionar Novo'}
-            </h3>
-            {editingId && (
-                <button onClick={resetForm} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
-                    <X className="w-4 h-4" /> Cancelar
-                </button>
-            )}
+          <h3 className="text-lg font-bold text-gray-800">
+            {editingId ? 'Editar Departamento' : 'Adicionar Novo'}
+          </h3>
+          {editingId && (
+            <button onClick={resetForm} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+              <X className="w-4 h-4" /> Cancelar
+            </button>
+          )}
         </div>
-        
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
+
+        <div className="flex gap-4 items-end flex-wrap">
+          <div className="flex-1 min-w-[160px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="Ex: Financeiro"
               value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
           <div className="w-32">
             <label className="block text-sm font-medium text-gray-700 mb-1">Ícone (Emoji)</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 text-center"
               placeholder="💰"
               value={formData.icon}
-              onChange={e => setFormData({...formData, icon: e.target.value})}
+              onChange={e => setFormData({ ...formData, icon: e.target.value })}
             />
           </div>
           <div className="w-48">
             <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-            <select 
+            <select
               className="w-full border border-gray-300 rounded-lg px-4 py-2"
               value={formData.type}
-              onChange={e => setFormData({...formData, type: e.target.value as any})}
+              onChange={e => setFormData({ ...formData, type: e.target.value as any })}
             >
               <option value="ai">IA (Automático)</option>
               <option value="human">Humano</option>
               <option value="hybrid">Híbrido</option>
             </select>
           </div>
-          
+
           {(formData.type === 'human' || formData.type === 'hybrid') && (
             <div className="w-48 animate-in fade-in slide-in-from-left-4 duration-300">
               <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2"
                 placeholder="Ex: 11999999999"
                 value={formData.phone}
-                onChange={e => setFormData({...formData, phone: e.target.value})}
+                onChange={e => setFormData({ ...formData, phone: e.target.value })}
               />
             </div>
           )}
 
-          <button 
+          <button
             onClick={handleSubmit}
-            className={`px-6 py-2 rounded-lg text-white flex items-center gap-2 transition-all ${
-                editingId 
-                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md' 
+            className={`px-6 py-2 rounded-lg text-white flex items-center gap-2 transition-all ${editingId
+                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md'
                 : 'bg-blue-600 hover:bg-blue-700'
-            }`}
+              }`}
           >
             {editingId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             {editingId ? 'Salvar' : 'Adicionar'}
           </button>
         </div>
+
+        {/* Prompt field — only for AI/hybrid */}
+        {(formData.type === 'ai' || formData.type === 'hybrid') && (
+          <div className="mt-4 animate-in fade-in duration-300">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Prompt personalizado <span className="text-gray-400 font-normal">(opcional)</span>
+            </label>
+            <textarea
+              className="w-full h-24 border border-gray-300 rounded-lg p-3 text-sm font-mono bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+              placeholder="Ex: Você é um especialista em suporte técnico da BHS. Responda de forma objetiva..."
+              value={formData.prompt}
+              onChange={e => setFormData({ ...formData, prompt: e.target.value })}
+            />
+            <p className="text-xs text-gray-400 mt-1">Se vazio, o prompt global de Configurações será usado.</p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -178,44 +192,38 @@ export default function Departments() {
           <tbody>
             {departments.map((dept) => (
               <tr key={dept.id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${editingId === dept.id ? 'bg-blue-50' : ''}`}>
-                <td className="p-4 text-gray-500">#{dept.display_order} <span className="text-xs text-gray-300">({dept.id})</span></td>
+                <td className="p-4 text-gray-500">#{dept.display_order}</td>
                 <td className="p-4 text-2xl">{dept.icon}</td>
                 <td className="p-4 font-medium text-gray-800">
                   {dept.name}
                   {dept.phone && <div className="text-xs text-gray-400 font-normal mt-0.5">📞 {dept.phone}</div>}
+                  {dept.prompt && <div className="text-xs text-purple-400 font-normal mt-0.5 truncate max-w-xs">🤖 prompt personalizado</div>}
                 </td>
                 <td className="p-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    dept.type === 'ai' ? 'bg-purple-100 text-purple-700' :
-                    dept.type === 'human' ? 'bg-orange-100 text-orange-700' :
-                    'bg-blue-100 text-blue-700'
-                  }`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${dept.type === 'ai' ? 'bg-purple-100 text-purple-700' :
+                      dept.type === 'human' ? 'bg-orange-100 text-orange-700' :
+                        'bg-blue-100 text-blue-700'
+                    }`}>
                     {dept.type.toUpperCase()}
                   </span>
                 </td>
                 <td className="p-4 text-right">
                   <div className="flex justify-end gap-2">
-                    <button 
-                        type="button"
-                        onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(dept);
-                        }}
-                        className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors"
-                        title="Editar departamento"
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleEdit(dept); }}
+                      className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors"
+                      title="Editar departamento"
                     >
-                        <Pencil className="w-4 h-4" />
+                      <Pencil className="w-4 h-4" />
                     </button>
-                    <button 
-                        type="button"
-                        onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(dept.id);
-                        }}
-                        className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
-                        title="Excluir departamento"
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(dept.id); }}
+                      className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors"
+                      title="Excluir departamento"
                     >
-                        <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
