@@ -21,6 +21,13 @@ router.post('/departments', (req, res) => {
   res.json({ success: true });
 });
 
+router.put('/departments/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, icon, type, phone } = req.body;
+  db.prepare('UPDATE departments SET name = ?, icon = ?, type = ?, phone = ? WHERE id = ?').run(name, icon, type, phone, id);
+  res.json({ success: true });
+});
+
 router.delete('/departments/:id', (req, res) => {
   const { id } = req.params;
   db.prepare('DELETE FROM departments WHERE id = ?').run(id);
