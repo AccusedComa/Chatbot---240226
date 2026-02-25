@@ -1,7 +1,7 @@
 import express from 'express';
-import db from '../db';
+import db from '../db.ts';
 import { v4 as uuidv4 } from 'uuid';
-import { ragService } from '../services/rag';
+import { ragService } from '../services/rag.ts';
 import { GoogleGenAI } from "@google/genai";
 
 const router = express.Router();

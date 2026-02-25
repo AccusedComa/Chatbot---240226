@@ -2,16 +2,16 @@ import 'dotenv/config';
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import authRoutes from "./src/server/routes/auth";
+import authRoutes from "./src/server/routes/auth.ts";
 
 console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Unset');
 
-import chatRoutes from "./src/server/routes/chat";
-import adminRoutes from "./src/server/routes/admin";
+import chatRoutes from "./src/server/routes/chat.ts";
+import adminRoutes from "./src/server/routes/admin.ts";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
 

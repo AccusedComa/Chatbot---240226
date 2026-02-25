@@ -1,8 +1,8 @@
 import express from 'express';
-import db from '../db';
+import db from '../db.ts';
 import multer from 'multer';
 import { createRequire } from 'module';
-import { ragService } from '../services/rag';
+import { ragService } from '../services/rag.ts';
 
 const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');

@@ -1,10 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
-import db from '../db';
+import db from '../db.ts';
 
-// Initialize Gemini
-const apiKey = process.env.GEMINI_API_KEY;
-const isValidKey = apiKey && apiKey !== 'MY_GEMINI_API_KEY';
-const ai = isValidKey ? new GoogleGenAI({ apiKey }) : null;
+// Helper to get API Key from env or DB
+const getApiKey = () => {
+  const envKey = process.env.GEMINI_API_KEY;
+  if (envKey && envKey !== 'MY_GEMINI_API_KEY') return envKey;
+  
+  try {
+    const setting = db.prepare("SELECT value FROM app_settings WHERE key = 'gemini_api_key'").get() as { value: string };
+    return setting?.value;
+  } catch (e) {
+    return null;
+  }
+};
 
 interface DocumentChunk {
   id: number;
