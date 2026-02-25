@@ -84,11 +84,15 @@ router.post('/message', async (req, res) => {
          if (!ai) {
             botResponse = "Desculpe, o sistema de IA não está configurado no momento. (API Key missing)";
          } else {
-             // Generate Answer with Gemini
-             const prompt = `Você é um assistente virtual da BHS Eletrônica.
+             // Get system prompt
+             const settings = db.prepare("SELECT value FROM app_settings WHERE key = 'system_prompt'").get() as { value: string };
+             const systemPrompt = settings?.value || `Você é um assistente virtual da BHS Eletrônica.
              Use o contexto abaixo para responder à pergunta do usuário.
              Se a resposta não estiver no contexto, diga que não encontrou a informação específica, mas tente ajudar com conhecimentos gerais de eletrônica se possível, deixando claro que é uma sugestão geral.
-             Seja cordial e breve.
+             Seja cordial e breve.`;
+
+             // Generate Answer with Gemini
+             const prompt = `${systemPrompt}
              
              Contexto:
              ${context}
@@ -126,8 +130,12 @@ router.post('/message', async (req, res) => {
            if (!ai) {
                botResponse = `Entendi: "${message}". (IA indisponível no momento)`;
            } else {
-               const prompt = `Você é um assistente virtual da BHS Eletrônica.
-               Use o contexto abaixo para responder à pergunta do usuário.
+               // Get system prompt
+               const settings = db.prepare("SELECT value FROM app_settings WHERE key = 'system_prompt'").get() as { value: string };
+               const systemPrompt = settings?.value || `Você é um assistente virtual da BHS Eletrônica.
+               Use o contexto abaixo para responder à pergunta do usuário.`;
+
+               const prompt = `${systemPrompt}
                Contexto: ${context}
                Pergunta: ${message}`;
                
