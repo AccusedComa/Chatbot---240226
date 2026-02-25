@@ -1,49 +1,22 @@
 import express from 'express';
-import { GoogleGenAI } from "@google/genai";
-import Groq from "groq-sdk";
-import db from '../db';
+import db from '../db.ts';
 import { v4 as uuidv4 } from 'uuid';
-import { ragService } from '../services/rag';
-import { getApiKey, getGroqApiKey } from '../config';
+import { ragService } from '../services/rag.ts';
+import { GoogleGenAI } from "@google/genai";
 
 const router = express.Router();
 
-// Helper to generate AI response with fallback
-async function generateAIResponse(prompt: string): Promise<string> {
-  const currentKey = getApiKey();
-  const ai = currentKey ? new GoogleGenAI({ apiKey: currentKey }) : null;
-
+const getApiKey = () => {
+  const envKey = process.env.GEMINI_API_KEY;
+  if (envKey && envKey !== 'MY_GEMINI_API_KEY') return envKey;
+  
   try {
-    if (!ai) throw new Error("Gemini API Key não configurada");
-
-    const result = await (ai.models as any).generateContent({
-      model: "gemini-1.5-flash",
-      contents: [{
-        role: 'user',
-        parts: [{ text: prompt }]
-      }]
-    });
-    return result.response.text();
-  } catch (error: any) {
-    console.error("Gemini Error, attempting Groq fallback:", error.message);
-
-    const groqKey = getGroqApiKey();
-    if (groqKey) {
-      try {
-        const groq = new Groq({ apiKey: groqKey });
-        const completion = await groq.chat.completions.create({
-          messages: [{ role: "user", content: prompt }],
-          model: "llama-3.3-70b-versatile",
-        });
-        console.log("Response delivered via Groq fallback");
-        return completion.choices[0]?.message?.content || "Desculpe, não consegui gerar uma resposta.";
-      } catch (groqError: any) {
-        console.error("Groq Fallback Error:", groqError.message);
-      }
-    }
-    return "Desculpe, estou com dificuldades para processar sua pergunta agora. Pode tentar novamente?";
+    const setting = db.prepare("SELECT value FROM app_settings WHERE key = 'gemini_api_key'").get() as { value: string };
+    return setting?.value;
+  } catch (e) {
+    return null;
   }
-}
+};
 
 // Create session
 router.post('/session', (req, res) => {
@@ -59,7 +32,7 @@ router.post('/session', (req, res) => {
 // Send message
 router.post('/message', async (req, res) => {
   const { session_id, message } = req.body;
-
+  
   if (!session_id || !message) {
     return res.status(400).json({ error: 'Missing session_id or message' });
   }
@@ -70,71 +43,118 @@ router.post('/message', async (req, res) => {
 
     // 2. Get session context
     const session = db.prepare('SELECT * FROM sessions WHERE session_id = ?').get(session_id) as any;
-
+    
     // 3. Logic
     let botResponse = "Olá! Como posso ajudar?";
     let options: { label: string, value: string }[] | undefined;
-
+    
     // Check onboarding status
     if (!session.full_name) {
-      // Expecting name
-      const firstName = message.split(' ')[0];
-      db.prepare('UPDATE sessions SET full_name = ?, first_name = ? WHERE session_id = ?').run(message, firstName, session_id);
-      botResponse = `Prazer ${firstName}, agora digite seu Whatsapp com DDD (ex 11977777777):`;
+       // Expecting name
+       const firstName = message.split(' ')[0];
+       db.prepare('UPDATE sessions SET full_name = ?, first_name = ? WHERE session_id = ?').run(message, firstName, session_id);
+       botResponse = `Prazer ${firstName}, agora digite seu Whatsapp com DDD (ex 11977777777):`;
     } else if (!session.whatsapp) {
-      // Expecting whatsapp
-      const cleanPhone = message.replace(/\D/g, '');
-      if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
-        db.prepare('UPDATE sessions SET whatsapp = ? WHERE session_id = ?').run(cleanPhone, session_id);
-        botResponse = "Perfeito! 📱\n🎯 Como posso ajudar você hoje?";
-
-        // Get departments
-        const depts = db.prepare('SELECT name, icon FROM departments ORDER BY display_order ASC').all() as any[];
-        options = [
-          { label: "🤖 Tirar dúvidas com IA", value: "IA" },
-          ...depts.map(d => ({ label: `${d.icon || ''} ${d.name}`, value: d.name }))
-        ];
-      } else {
-        botResponse = "Número inválido. Digite apenas números com DDD (ex: 11977777777).";
-      }
+       // Expecting whatsapp
+       const cleanPhone = message.replace(/\D/g, '');
+       if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+         db.prepare('UPDATE sessions SET whatsapp = ? WHERE session_id = ?').run(cleanPhone, session_id);
+         botResponse = "Perfeito! 📱\n🎯 Como posso ajudar você hoje?";
+         
+         // Get departments
+         const depts = db.prepare('SELECT name, icon FROM departments ORDER BY display_order ASC').all() as any[];
+         options = [
+           { label: "🤖 Tirar dúvidas com IA", value: "IA" },
+           ...depts.map(d => ({ label: `${d.icon || ''} ${d.name}`, value: d.name }))
+         ];
+       } else {
+         botResponse = "Número inválido. Digite apenas números com DDD (ex: 11977777777).";
+       }
     } else {
-      // Main flow
-      if (message === "IA" || session.current_mode === 'IA') { // Assuming we add current_mode to session later, for now just simple toggle
+       // Main flow
+       if (message === "IA" || session.current_mode === 'IA') { // Assuming we add current_mode to session later, for now just simple toggle
+         
+         // RAG Search
+         const relevantDocs = await ragService.search(message);
+         const context = relevantDocs.map(d => d.content).join('\n\n');
+         
+         const currentKey = getApiKey();
+         const ai = currentKey ? new GoogleGenAI({ apiKey: currentKey }) : null;
 
-        // RAG Search
-        const relevantDocs = await ragService.search(message);
-        const context = relevantDocs.map(d => d.content).join('\n\n');
-
-        const prompt = `Você é um assistente virtual da BHS Eletrônica.
-           Use o contexto abaixo para responder à pergunta do usuário.
-           Se a resposta não estiver no contexto, diga que não encontrou a informação específica, mas tente ajudar com conhecimentos gerais de eletrônica se possível, deixando claro que é uma sugestão geral.
-           Seja cordial e breve.
-           
-           Contexto:
-           ${context}
-           
-           Pergunta: ${message}`;
-
-        botResponse = await generateAIResponse(prompt);
-
-      } else {
-        // Check if it matches a department
-        const dept = db.prepare('SELECT * FROM departments WHERE name = ?').get(message) as any;
-        if (dept) {
-          botResponse = `Beleza! Me diga em poucas palavras o que você precisa para o departamento de ${dept.name} para eu direcionar melhor.`;
-        } else {
-          // Default fallback -> Treat as AI query for now to be helpful
-          const relevantDocs = await ragService.search(message);
-          const context = relevantDocs.map(d => d.content).join('\n\n');
-
-          const prompt = `Você é um assistente virtual da BHS Eletrônica.
+         if (!ai) {
+            botResponse = "Desculpe, o sistema de IA não está configurado no momento. (API Key missing)";
+         } else {
+             // Get system prompt
+             const settings = db.prepare("SELECT value FROM app_settings WHERE key = 'system_prompt'").get() as { value: string };
+             const systemPrompt = settings?.value || `Você é um assistente virtual da BHS Eletrônica.
              Use o contexto abaixo para responder à pergunta do usuário.
-             Contexto: ${context}
+             Se a resposta não estiver no contexto, diga que não encontrou a informação específica, mas tente ajudar com conhecimentos gerais de eletrônica se possível, deixando claro que é uma sugestão geral.
+             Seja cordial e breve.`;
+
+             // Generate Answer with Gemini
+             const prompt = `${systemPrompt}
+             
+             Contexto:
+             ${context}
+             
              Pergunta: ${message}`;
 
-          botResponse = await generateAIResponse(prompt);
-        }
-      }
+             try {
+                const result = await ai.models.generateContent({
+                  model: "gemini-2.5-flash-latest",
+                  contents: {
+                    role: 'user',
+                    parts: [{ text: prompt }]
+                  }
+                });
+                botResponse = result.text || "Desculpe, não consegui gerar uma resposta.";
+             } catch (aiError) {
+                 console.error("Gemini Error:", aiError);
+                 botResponse = "Desculpe, estou com dificuldades para processar sua pergunta agora. Pode tentar novamente?";
+             }
+         }
+
+       } else {
+         // Check if it matches a department
+         const dept = db.prepare('SELECT * FROM departments WHERE name = ?').get(message) as any;
+         if (dept) {
+           botResponse = `Beleza! Me diga em poucas palavras o que você precisa para o departamento de ${dept.name} para eu direcionar melhor.`;
+         } else {
+           // Default fallback -> Treat as AI query for now to be helpful
+           const relevantDocs = await ragService.search(message);
+           const context = relevantDocs.map(d => d.content).join('\n\n');
+           
+           const currentKey = getApiKey();
+           const ai = currentKey ? new GoogleGenAI({ apiKey: currentKey }) : null;
+
+           if (!ai) {
+               botResponse = `Entendi: "${message}". (IA indisponível no momento)`;
+           } else {
+               // Get system prompt
+               const settings = db.prepare("SELECT value FROM app_settings WHERE key = 'system_prompt'").get() as { value: string };
+               const systemPrompt = settings?.value || `Você é um assistente virtual da BHS Eletrônica.
+               Use o contexto abaixo para responder à pergunta do usuário.`;
+
+               const prompt = `${systemPrompt}
+               Contexto: ${context}
+               Pergunta: ${message}`;
+               
+               try {
+                  const result = await ai.models.generateContent({
+                    model: "gemini-2.5-flash-latest",
+                    contents: {
+                      role: 'user',
+                      parts: [{ text: prompt }]
+                    }
+                  });
+                  botResponse = result.text || `Entendi: "${message}". (IA indisponível no momento)`;
+               } catch (aiError) {
+                   console.error("Gemini Error (Fallback):", aiError);
+                   botResponse = `Entendi: "${message}". (IA indisponível no momento)`;
+               }
+           }
+         }
+       }
     }
 
     // 4. Save bot message
