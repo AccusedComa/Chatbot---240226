@@ -120,4 +120,16 @@ router.post('/rag/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+// ─── RAG Documents List & Delete ────────────────────────────────────────────
+router.get('/rag/documents', (req, res) => {
+  const docs = db.prepare('SELECT id, filename, created_at FROM documents ORDER BY created_at DESC').all();
+  res.json(docs);
+});
+
+router.delete('/rag/documents/:id', (req, res) => {
+  const { id } = req.params;
+  db.prepare('DELETE FROM documents WHERE id = ?').run(id);
+  res.json({ success: true });
+});
+
 export default router;

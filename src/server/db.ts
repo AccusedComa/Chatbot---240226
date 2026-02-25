@@ -3,7 +3,7 @@ import path from 'path';
 
 // Initialize DB
 const isProduction = process.env.NODE_ENV === 'production';
-const dbPath = isProduction 
+const dbPath = isProduction
   ? path.resolve('/tmp', 'chatbot.db')
   : path.resolve(process.cwd(), 'chatbot.db');
 
@@ -26,6 +26,9 @@ try {
       whatsapp TEXT,
       full_name TEXT,
       first_name TEXT,
+      current_mode TEXT DEFAULT NULL,
+      current_dept TEXT DEFAULT NULL,
+      controlled_by TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -76,6 +79,17 @@ try {
   console.log("DB tables initialized successfully");
 } catch (err) {
   console.error("Failed to initialize DB tables:", err);
+}
+
+// Safe migrations for existing DBs
+const migrations = [
+  'ALTER TABLE sessions ADD COLUMN current_mode TEXT DEFAULT NULL',
+  'ALTER TABLE sessions ADD COLUMN current_dept TEXT DEFAULT NULL',
+  'ALTER TABLE sessions ADD COLUMN controlled_by TEXT DEFAULT NULL',
+  'ALTER TABLE departments ADD COLUMN prompt TEXT',
+];
+for (const migration of migrations) {
+  try { db.exec(migration); } catch (_) { /* column already exists */ }
 }
 
 export default db;

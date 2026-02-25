@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Save, Upload, Check, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Save, Upload, Check, AlertCircle, Loader2, FileText, Trash2, X } from 'lucide-react';
 import { apiFetch } from './api';
 
 export default function Settings() {
@@ -10,11 +10,14 @@ export default function Settings() {
   const [systemPrompt, setSystemPrompt] = useState('');
   const [savedPrompt, setSavedPrompt] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [uploadMsg, setUploadMsg] = useState('');
+  const [uploadMsg, setUploadMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [ragDocs, setRagDocs] = useState<{ id: number; filename: string; created_at: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchSettings();
+    fetchRagDocs();
   }, []);
 
   const fetchSettings = () => {
@@ -34,6 +37,48 @@ export default function Settings() {
         setLoading(false);
       })
       .catch(err => console.error(err));
+  };
+
+  const fetchRagDocs = () => {
+    apiFetch('/api/admin/rag/documents')
+      .then(res => res.json())
+      .then(data => Array.isArray(data) ? setRagDocs(data) : setRagDocs([]))
+      .catch(() => setRagDocs([]));
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploading(true);
+    setUploadMsg(null);
+    try {
+      const res = await fetch('/api/admin/rag/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUploadMsg({ text: `✅ ${data.message}`, ok: true });
+        fetchRagDocs();
+      } else {
+        setUploadMsg({ text: `❌ ${data.error}`, ok: false });
+      }
+    } catch (err: any) {
+      setUploadMsg({ text: `❌ ${err.message}`, ok: false });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteDoc = async (id: number) => {
+    try {
+      await apiFetch(`/api/admin/rag/documents/${id}`, { method: 'DELETE' });
+      fetchRagDocs();
+    } catch (err) { console.error(err); }
   };
 
   const handleSaveKey = async (type: 'gemini' | 'groq') => {
@@ -263,8 +308,8 @@ export default function Settings() {
             onClick={handleSavePrompt}
             disabled={systemPrompt === savedPrompt}
             className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-sm active:scale-95 ${systemPrompt === savedPrompt
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
           >
             <Save className="w-4 h-4" /> Salvar Alterações
@@ -277,6 +322,73 @@ export default function Settings() {
           placeholder="Digite as instruções para a IA aqui..."
         />
         <p className="text-xs text-gray-400 mt-2">O prompt define a personalidade e as regras da IA. Use este espaço para refinar como ela deve responder.</p>
+      </div>
+
+      {/* RAG Document Upload */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all hover:shadow-md">
+        <h3 className="text-lg font-bold text-gray-800 mb-1">Base de Conhecimento (RAG)</h3>
+        <p className="text-sm text-gray-500 mb-4">Envie documentos PDF ou TXT para que a IA use como referência nas respostas.</p>
+
+        {/* Upload area */}
+        <div
+          onClick={() => !uploading && fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${uploading ? 'border-blue-300 bg-blue-50/40' : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50/20'
+            }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.txt"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+          {uploading ? (
+            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+          ) : (
+            <Upload className="w-8 h-8 text-gray-300" />
+          )}
+          <p className="text-sm font-medium text-gray-600">
+            {uploading ? 'Processando documento...' : 'Clique para selecionar ou arraste um arquivo'}
+          </p>
+          <p className="text-xs text-gray-400">PDF ou TXT · Máx: 10MB</p>
+        </div>
+
+        {uploadMsg && (
+          <div className={`mt-3 flex items-start gap-2 px-4 py-3 rounded-lg text-sm font-medium ${uploadMsg.ok ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
+            }`}>
+            {uploadMsg.ok ? <Check className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
+            <span>{uploadMsg.text}</span>
+            <button onClick={() => setUploadMsg(null)} className="ml-auto opacity-60 hover:opacity-100"><X className="w-3 h-3" /></button>
+          </div>
+        )}
+
+        {/* Document list */}
+        {ragDocs.length > 0 && (
+          <div className="mt-5">
+            <h4 className="text-sm font-semibold text-gray-600 mb-3">Documentos carregados ({ragDocs.length})</h4>
+            <div className="space-y-2">
+              {ragDocs.map(doc => (
+                <div key={doc.id} className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3 border border-gray-100">
+                  <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{doc.filename}</p>
+                    <p className="text-xs text-gray-400">{new Date(doc.created_at).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteDoc(doc.id)}
+                    className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full transition-colors"
+                    title="Remover documento"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {ragDocs.length === 0 && !uploading && (
+          <p className="text-center text-xs text-gray-400 mt-4">Nenhum documento na base ainda.</p>
+        )}
       </div>
     </div>
   );
