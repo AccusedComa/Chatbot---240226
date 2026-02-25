@@ -2,12 +2,17 @@ import 'dotenv/config';
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import authRoutes from "./src/server/routes/auth.ts";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+import authRoutes from "./src/server/routes/auth";
+import whatsappRoutes from "./src/server/routes/whatsapp";
 
 console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Unset');
 
-import chatRoutes from "./src/server/routes/chat.ts";
-import adminRoutes from "./src/server/routes/admin.ts";
+import chatRoutes from "./src/server/routes/chat";
+import adminRoutes from "./src/server/routes/admin";
 
 async function startServer() {
   const app = express();
@@ -25,6 +30,7 @@ async function startServer() {
   app.use('/api/auth', authRoutes);
   app.use('/api/chat', chatRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/whatsapp', whatsappRoutes);
 
   // Global Error Handler
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -38,7 +44,7 @@ async function startServer() {
     // For now, we'll serve a placeholder or redirect to the dev server's asset if possible.
     // In production, this would serve the built JS from dist.
     res.type('application/javascript');
-    res.send(`console.log("Widget loaded");`); 
+    res.send(`console.log("Widget loaded");`);
   });
 
   // Vite middleware for development
