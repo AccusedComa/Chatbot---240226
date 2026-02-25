@@ -88,6 +88,7 @@ router.post('/message', async (req, res) => {
         db.prepare('UPDATE sessions SET whatsapp = ? WHERE session_id = ?').run(cleanPhone, session_id);
         botResponse = "Perfeito! 📱\n🎯 Como posso ajudar você hoje?";
 
+<<<<<<< HEAD
         // Get departments
         const depts = db.prepare('SELECT name, icon FROM departments ORDER BY display_order ASC').all() as any[];
         options = [
@@ -135,6 +136,82 @@ router.post('/message', async (req, res) => {
           botResponse = await generateAIResponse(prompt);
         }
       }
+=======
+         if (!ai) {
+            botResponse = "Desculpe, o sistema de IA não está configurado no momento. (API Key missing)";
+         } else {
+             // Get system prompt
+             const settings = db.prepare("SELECT value FROM app_settings WHERE key = 'system_prompt'").get() as { value: string };
+             const systemPrompt = settings?.value || `Você é um assistente virtual da BHS Eletrônica.
+             Use o contexto abaixo para responder à pergunta do usuário.
+             Se a resposta não estiver no contexto, diga que não encontrou a informação específica, mas tente ajudar com conhecimentos gerais de eletrônica se possível, deixando claro que é uma sugestão geral.
+             Seja cordial e breve.`;
+
+             // Generate Answer with Gemini
+             const prompt = `${systemPrompt}
+             
+             Contexto:
+             ${context}
+             
+             Pergunta: ${message}`;
+
+             try {
+                const result = await ai.models.generateContent({
+                  model: "gemini-2.5-flash-latest",
+                  contents: {
+                    role: 'user',
+                    parts: [{ text: prompt }]
+                  }
+                });
+                botResponse = result.text || "Desculpe, não consegui gerar uma resposta.";
+             } catch (aiError) {
+                 console.error("Gemini Error:", aiError);
+                 botResponse = "Desculpe, estou com dificuldades para processar sua pergunta agora. Pode tentar novamente?";
+             }
+         }
+
+       } else {
+         // Check if it matches a department
+         const dept = db.prepare('SELECT * FROM departments WHERE name = ?').get(message) as any;
+         if (dept) {
+           botResponse = `Beleza! Me diga em poucas palavras o que você precisa para o departamento de ${dept.name} para eu direcionar melhor.`;
+         } else {
+           // Default fallback -> Treat as AI query for now to be helpful
+           const relevantDocs = await ragService.search(message);
+           const context = relevantDocs.map(d => d.content).join('\n\n');
+           
+           const currentKey = getApiKey();
+           const ai = currentKey ? new GoogleGenAI({ apiKey: currentKey }) : null;
+
+           if (!ai) {
+               botResponse = `Entendi: "${message}". (IA indisponível no momento)`;
+           } else {
+               // Get system prompt
+               const settings = db.prepare("SELECT value FROM app_settings WHERE key = 'system_prompt'").get() as { value: string };
+               const systemPrompt = settings?.value || `Você é um assistente virtual da BHS Eletrônica.
+               Use o contexto abaixo para responder à pergunta do usuário.`;
+
+               const prompt = `${systemPrompt}
+               Contexto: ${context}
+               Pergunta: ${message}`;
+               
+               try {
+                  const result = await ai.models.generateContent({
+                    model: "gemini-2.5-flash-latest",
+                    contents: {
+                      role: 'user',
+                      parts: [{ text: prompt }]
+                    }
+                  });
+                  botResponse = result.text || `Entendi: "${message}". (IA indisponível no momento)`;
+               } catch (aiError) {
+                   console.error("Gemini Error (Fallback):", aiError);
+                   botResponse = `Entendi: "${message}". (IA indisponível no momento)`;
+               }
+           }
+         }
+       }
+>>>>>>> origin/main
     }
 
     // 4. Save bot message

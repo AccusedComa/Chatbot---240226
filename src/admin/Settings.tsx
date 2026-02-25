@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Save, Upload, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { apiFetch } from './api';
 
 export default function Settings() {
   const [apiKey, setApiKey] = useState('');
   const [savedKey, setSavedKey] = useState('');
   const [groqApiKey, setGroqApiKey] = useState('');
   const [savedGroqKey, setSavedGroqKey] = useState('');
+  const [systemPrompt, setSystemPrompt] = useState('');
+  const [savedPrompt, setSavedPrompt] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState('');
   const [loading, setLoading] = useState(true);
@@ -15,11 +18,19 @@ export default function Settings() {
   }, []);
 
   const fetchSettings = () => {
-    fetch('/api/admin/settings')
+    apiFetch('/api/admin/settings')
       .then(res => res.json())
       .then(data => {
         if (data.gemini_api_key) setSavedKey(data.gemini_api_key);
         if (data.groq_api_key) setSavedGroqKey(data.groq_api_key);
+
+        if (data.system_prompt) {
+          setSystemPrompt(data.system_prompt);
+          setSavedPrompt(data.system_prompt);
+        } else {
+          const defaultPrompt = `Você é um assistente virtual da BHS Eletrônica.\nUse o contexto abaixo para responder à pergunta do usuário.\nSe a resposta não estiver no contexto, diga que não encontrou a informação específica, mas tente ajudar com conhecimentos gerais de eletrônica se possível, deixando claro que é uma sugestão geral.\nSeja cordial e breve.`;
+          setSystemPrompt(defaultPrompt);
+        }
         setLoading(false);
       })
       .catch(err => console.error(err));
@@ -30,9 +41,8 @@ export default function Settings() {
     if (!value) return;
 
     try {
-      await fetch('/api/admin/settings', {
+      await apiFetch('/api/admin/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           key: type === 'gemini' ? 'gemini_api_key' : 'groq_api_key',
           value
@@ -40,16 +50,31 @@ export default function Settings() {
       });
 
       if (type === 'gemini') {
-        setSavedKey('********' + value.slice(-4));
+        setSavedKey('••••••••' + value.slice(-4));
         setApiKey('');
       } else {
-        setSavedGroqKey('********' + value.slice(-4));
+        setSavedGroqKey('••••••••' + value.slice(-4));
         setGroqApiKey('');
       }
       alert('Chave salva com sucesso!');
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar chave.');
+    }
+  };
+
+  const handleSavePrompt = async () => {
+    if (!systemPrompt) return;
+    try {
+      await apiFetch('/api/admin/settings', {
+        method: 'POST',
+        body: JSON.stringify({ key: 'system_prompt', value: systemPrompt })
+      });
+      setSavedPrompt(systemPrompt);
+      alert('Prompt do sistema salvo com sucesso!');
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar prompt.');
     }
   };
 
@@ -96,7 +121,7 @@ export default function Settings() {
         <p className="text-gray-500">Ajustes gerais do sistema e Inteligência Artificial.</p>
       </header>
 
-      {/* API Key Section */}
+      {/* Gemini API Key */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 transition-all hover:shadow-md">
         <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
           Configuração da IA (Gemini)
@@ -133,7 +158,7 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Groq Configuration Section */}
+      {/* Groq API Key */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 transition-all hover:shadow-md">
         <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
           Configuração da IA Reserva (Groq)
@@ -230,18 +255,28 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* System Prompt Section */}
+      {/* System Prompt */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all hover:shadow-md">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Prompt do Sistema</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-bold text-gray-800">Prompt do Sistema</h3>
+          <button
+            onClick={handleSavePrompt}
+            disabled={systemPrompt === savedPrompt}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-sm active:scale-95 ${systemPrompt === savedPrompt
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+          >
+            <Save className="w-4 h-4" /> Salvar Alterações
+          </button>
+        </div>
         <textarea
-          className="w-full h-32 border border-gray-300 rounded-lg p-3 text-sm font-mono bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-          readOnly
-          value={`Você é um assistente virtual da BHS Eletrônica.
-Use o contexto abaixo para responder à pergunta do usuário.
-Se a resposta não estiver no contexto, diga que não encontrou a informação específica, mas tente ajudar com conhecimentos gerais de eletrônica se possível, deixando claro que é uma sugestão geral.
-Seja cordial e breve.`}
+          className="w-full h-64 border border-gray-300 rounded-lg p-4 text-sm font-mono bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-y"
+          value={systemPrompt}
+          onChange={(e) => setSystemPrompt(e.target.value)}
+          placeholder="Digite as instruções para a IA aqui..."
         />
-        <p className="text-xs text-gray-400 mt-2">O prompt define a personalidade e as regras da IA.</p>
+        <p className="text-xs text-gray-400 mt-2">O prompt define a personalidade e as regras da IA. Use este espaço para refinar como ela deve responder.</p>
       </div>
     </div>
   );
