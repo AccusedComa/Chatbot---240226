@@ -2,11 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 
 // Initialize DB
-const isProduction = process.env.NODE_ENV === 'production';
-const dbPath = isProduction 
-  ? path.resolve('/tmp', 'chatbot.db')
-  : path.resolve(process.cwd(), 'chatbot.db');
-
+const dbPath = path.resolve(process.cwd(), 'chatbot.db');
 console.log(`Initializing DB at ${dbPath}`);
 const db = new Database(dbPath);
 
