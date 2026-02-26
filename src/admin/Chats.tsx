@@ -1,11 +1,5 @@
-<<<<<<< HEAD
 import React, { useEffect, useState, useRef } from 'react';
 import { MessageSquare, User, Calendar, Send, StopCircle, PlayCircle, Globe, MessageCircle } from 'lucide-react';
-import { apiFetch } from './api';
-=======
-import React, { useEffect, useState } from 'react';
-import { MessageSquare, User, Calendar } from 'lucide-react';
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
 
 interface Session {
   id: number;
@@ -36,17 +30,12 @@ export default function Chats() {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-<<<<<<< HEAD
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const fetchSessions = () => {
-    apiFetch('/api/admin/sessions')
-=======
-  useEffect(() => {
     fetch('/api/admin/sessions')
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
       .then(res => res.json())
       .then(data => {
         const newSessions = Array.isArray(data) ? data : [];
@@ -82,7 +71,7 @@ export default function Chats() {
   const handleSessionSelect = (sessionId: string) => {
     setSelectedSession(sessionId);
     // Mark as read in DB
-    apiFetch(`/api/admin/sessions/${sessionId}/read`, { method: 'POST' })
+    fetch(`/api/admin/sessions/${sessionId}/read`, { method: 'POST' })
       .then(() => {
         // Local update to avoid flicker before next fetch
         setSessions(prev => prev.map(s => s.session_id === sessionId ? { ...s, is_read: 1 } : s));
@@ -106,7 +95,7 @@ export default function Chats() {
 
     setSending(true);
     try {
-      const res = await apiFetch(`/api/admin/sessions/${selectedSession}/message`, {
+      const res = await fetch(`/api/admin/sessions/${selectedSession}/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: adminMsg })
@@ -131,7 +120,7 @@ export default function Chats() {
     console.log(`[FRONTEND] Takeover: ${action} for ${selectedSession}`);
     setTakeoverLoading(selectedSession);
     try {
-      const res = await apiFetch(`/api/admin/sessions/${selectedSession}/takeover`, {
+      const res = await fetch(`/api/admin/sessions/${selectedSession}/takeover`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action })
@@ -184,7 +173,6 @@ export default function Chats() {
   const currentSession = sessions.find(s => s.session_id === selectedSession);
 
   return (
-<<<<<<< HEAD
     <div className="h-[calc(100vh-4rem)] flex flex-col gap-4">
       {/* Tab Switcher */}
       <div className="flex gap-2">
@@ -200,39 +188,6 @@ export default function Chats() {
         >
           <MessageCircle className="w-5 h-5" /> WhatsApp Business
         </button>
-=======
-    <div className="h-[calc(100vh-4rem)] flex gap-6">
-      {/* Session List */}
-      <div className="w-1/3 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
-        <div className="p-4 border-b">
-          <h2 className="font-bold text-gray-800">Conversas Recentes</h2>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {sessions.map(session => (
-            <div 
-              key={session.session_id}
-              onClick={() => setSelectedSession(session.session_id)}
-              className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${selectedSession === session.session_id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
-            >
-              <div className="flex justify-between items-start mb-1">
-                <h3 className="font-medium text-gray-900">{session.full_name || 'Visitante Anônimo'}</h3>
-                <span className="text-xs text-gray-400">
-                  {new Date(session.created_at).toLocaleDateString()}
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 flex items-center gap-1">
-                <User className="w-3 h-3" /> {session.whatsapp || 'Sem contato'}
-              </p>
-              <p className="text-xs text-gray-400 mt-2 font-mono truncate">
-                ID: {session.session_id.slice(0, 8)}...
-              </p>
-            </div>
-          ))}
-          {sessions.length === 0 && !loading && (
-            <div className="p-8 text-center text-gray-500">Nenhuma conversa iniciada.</div>
-          )}
-        </div>
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
       </div>
 
       <div className="flex-1 flex gap-6 min-h-0">
@@ -251,7 +206,6 @@ export default function Chats() {
                 {filteredSessions.length}
               </span>
             </div>
-<<<<<<< HEAD
           </div>
           <div className="flex-1 overflow-y-auto">
             {activeTab === 'whatsapp' && !wsStatus?.connected ? (
@@ -346,20 +300,6 @@ export default function Chats() {
                         {currentSession?.controlled_by === 'admin' ? 'Modo Humano / IA Pausada' : 'IA Gerindo Atendimento'}
                       </span>
                     </div>
-=======
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map(msg => (
-                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[70%] rounded-lg p-3 ${
-                    msg.sender === 'user' 
-                      ? 'bg-blue-600 text-white rounded-tr-none' 
-                      : 'bg-gray-100 text-gray-800 rounded-tl-none'
-                  }`}>
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    <span className={`text-[10px] block mt-1 ${msg.sender === 'user' ? 'text-blue-200' : 'text-gray-400'}`}>
-                      {new Date(msg.timestamp).toLocaleTimeString()}
-                    </span>
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
                   </div>
                 </div>
                 <div className="flex gap-2">
