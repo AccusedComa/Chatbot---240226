@@ -29,6 +29,9 @@ try {
       current_mode TEXT DEFAULT NULL,
       current_dept TEXT DEFAULT NULL,
       controlled_by TEXT DEFAULT NULL,
+      platform TEXT DEFAULT 'web',
+      last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -83,13 +86,23 @@ try {
 
 // Safe migrations for existing DBs
 const migrations = [
+  'ALTER TABLE sessions ADD COLUMN full_name TEXT',
+  'ALTER TABLE sessions ADD COLUMN first_name TEXT',
   'ALTER TABLE sessions ADD COLUMN current_mode TEXT DEFAULT NULL',
   'ALTER TABLE sessions ADD COLUMN current_dept TEXT DEFAULT NULL',
   'ALTER TABLE sessions ADD COLUMN controlled_by TEXT DEFAULT NULL',
+  'ALTER TABLE sessions ADD COLUMN platform TEXT DEFAULT "web"',
   'ALTER TABLE departments ADD COLUMN prompt TEXT',
+  'ALTER TABLE sessions ADD COLUMN last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP',
+  'ALTER TABLE sessions ADD COLUMN is_read INTEGER DEFAULT 0',
 ];
 for (const migration of migrations) {
-  try { db.exec(migration); } catch (_) { /* column already exists */ }
+  try {
+    db.exec(migration);
+    console.log(`Executed migration: ${migration}`);
+  } catch (e) {
+    // Column already exists or other non-critical error
+  }
 }
 
 export default db;

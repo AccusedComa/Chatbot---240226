@@ -74,6 +74,33 @@ export default function ChatWidget() {
     initChat();
   }, []);
 
+  // Polling for new messages
+  useEffect(() => {
+    if (!sessionId || !isOpen) return;
+
+    const pollMessages = async () => {
+      try {
+        const res = await fetch(`/api/chat/history?session_id=${sessionId}`);
+        if (res.ok) {
+          const history = await res.json();
+          if (history && history.length > messages.length) {
+            const formattedHistory = history.map((m: any) => ({
+              id: m.id,
+              text: m.content,
+              sender: m.sender,
+            }));
+            setMessages(formattedHistory);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to poll messages:', err);
+      }
+    };
+
+    const interval = setInterval(pollMessages, 3000);
+    return () => clearInterval(interval);
+  }, [sessionId, isOpen, messages.length]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -99,19 +126,25 @@ export default function ChatWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, message: userMsg })
       });
-      
+
       if (!res.ok) {
         throw new Error(`Server error: ${res.status}`);
       }
 
       const data = await res.json();
-      
-      addMessage({ 
-        id: Date.now() + 1, 
-        text: data.response, 
+
+      addMessage({
+        id: Date.now() + 1,
+        text: data.response,
         sender: 'bot',
-        options: data.options 
+        options: data.options
       });
+
+      if (data.redirectUrl) {
+        setTimeout(() => {
+          window.open(data.redirectUrl, '_blank');
+        }, 1500);
+      }
     } catch (err) {
       console.error(err);
       addMessage({ id: Date.now() + 1, text: "Desculpe, tive um erro de conexão.", sender: 'bot' });
@@ -144,9 +177,15 @@ export default function ChatWidget() {
                   </span>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="hover:bg-white/10 p-1 rounded">
+              <button onClick={() => setIsOpen(false)} className="hover:bg-white/10 p-1 rounded transition-colors">
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Tooltip Banner */}
+            <div className="bg-blue-50/80 backdrop-blur-sm border-b border-blue-100 p-2 text-center text-[11px] text-blue-800 font-medium shrink-0 flex items-center justify-center shadow-sm z-10">
+              <span className="mr-1.5 opacity-90">💡</span>
+              <span>Digite <strong className="font-bold text-blue-900 bg-blue-100/50 px-1 rounded">menu</strong> a qualquer momento para ver as opções.</span>
             </div>
 
             {/* Messages */}
@@ -157,11 +196,10 @@ export default function ChatWidget() {
                   className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-wrap ${
-                      msg.sender === 'user'
-                        ? 'bg-blue-600 text-white rounded-br-none'
-                        : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-none'
-                    }`}
+                    className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-wrap ${msg.sender === 'user'
+                      ? 'bg-blue-600 text-white rounded-br-none'
+                      : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-none'
+                      }`}
                   >
                     {msg.text}
                   </div>

@@ -26,22 +26,21 @@ export class RagService {
   // Generate embedding for a text
   async generateEmbedding(text: string): Promise<number[]> {
     const currentKey = getApiKey();
-    const ai = currentKey ? new GoogleGenAI({ apiKey: currentKey }) : null;
+    const ai = currentKey ? new (GoogleGenAI as any)(currentKey) : null;
 
     if (!ai) {
       console.warn("GEMINI_API_KEY not set. Skipping embedding generation.");
       return []; // Return empty or throw specific error
     }
     try {
-      const result = await ai.models.embedContent({
-        model: "text-embedding-004",
-        contents: { parts: [{ text }] }
-      } as any);
+      // Use embedding-001 as default as it's more widely available across all regions/versions
+      const model = ai.getGenerativeModel({ model: "embedding-001" });
+      const result = await model.embedContent(text);
 
-      if (!result.embeddings || result.embeddings.length === 0) {
+      if (!result.embedding || !result.embedding.values) {
         throw new Error("No embedding returned");
       }
-      return result.embeddings[0].values;
+      return result.embedding.values;
     } catch (error) {
       console.error("Error generating embedding:", error);
       throw error;

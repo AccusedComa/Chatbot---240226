@@ -60,8 +60,14 @@ router.get('/stats', (req, res) => {
 
 // ─── Sessions ───────────────────────────────────────────────────────────────
 router.get('/sessions', (req, res) => {
-  const sessions = db.prepare('SELECT * FROM sessions ORDER BY created_at DESC').all();
+  const sessions = db.prepare('SELECT * FROM sessions ORDER BY last_message_at DESC').all();
   res.json(sessions);
+});
+
+router.post('/sessions/:sessionId/read', (req, res) => {
+  const { sessionId } = req.params;
+  db.prepare('UPDATE sessions SET is_read = 1 WHERE session_id = ?').run(sessionId);
+  res.json({ success: true });
 });
 
 // ─── Settings ───────────────────────────────────────────────────────────────
@@ -124,6 +130,69 @@ router.post('/rag/upload', upload.single('file'), async (req, res) => {
 router.get('/rag/documents', (req, res) => {
   const docs = db.prepare('SELECT id, filename, created_at FROM documents ORDER BY created_at DESC').all();
   res.json(docs);
+});
+
+// ─── Live Chat Control ─────────────────────────────────────────────────────
+router.post('/sessions/:sessionId/message', async (req, res) => {
+  const { sessionId } = req.params;
+  const { content } = req.body;
+
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+
+  try {
+    console.log(`[ADMIN] Sending message to session ${sessionId}: ${content.slice(0, 20)}...`);
+
+    // 1. Get session info to check platform
+    const session = db.prepare('SELECT * FROM sessions WHERE session_id = ?').get(sessionId) as any;
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    // 2. Save message as 'bot' (sent by admin)
+    db.prepare('INSERT INTO messages (session_id, sender, content) VALUES (?, ?, ?)').run(
+      sessionId, 'bot', content
+    );
+
+    // 3. Automatically put session in 'admin' control mode
+    db.prepare("UPDATE sessions SET controlled_by = 'admin' WHERE session_id = ?").run(sessionId);
+
+    // 4. If platform is WhatsApp, send real message
+    if (session.platform === 'whatsapp') {
+      const { whatsappService } = await import('../services/whatsapp');
+      await whatsappService.sendMessage(sessionId, content);
+      console.log(`[ADMIN] WhatsApp message delivered to ${sessionId}`);
+    }
+
+    // 5. Update last_message_at and mark as read (admin just responded)
+    db.prepare("UPDATE sessions SET last_message_at = CURRENT_TIMESTAMP, is_read = 1 WHERE session_id = ?").run(sessionId);
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[ADMIN] Message Error:', err);
+    res.status(500).json({ error: 'Failed to send message', details: err.message });
+  }
+});
+
+router.post('/sessions/:sessionId/takeover', (req, res) => {
+  const { sessionId } = req.params;
+  const { action } = req.body; // 'assume' or 'release'
+
+  if (!action) return res.status(400).json({ error: 'Action is required' });
+
+  try {
+    console.log(`[ADMIN] Takeover request for session ${sessionId}, action: ${action}`);
+    const controlledBy = action === 'assume' ? 'admin' : null;
+    const result = db.prepare('UPDATE sessions SET controlled_by = ? WHERE session_id = ?').run(
+      controlledBy, sessionId
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    res.json({ success: true, controlled_by: controlledBy });
+  } catch (err: any) {
+    console.error('[ADMIN] Takeover Error:', err);
+    res.status(500).json({ error: 'Failed to update control status', details: err.message });
+  }
 });
 
 router.delete('/rag/documents/:id', (req, res) => {

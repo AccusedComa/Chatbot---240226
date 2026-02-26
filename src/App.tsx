@@ -7,6 +7,14 @@ import Settings from './admin/Settings';
 import AdminLayout from './admin/AdminLayout';
 import ChatWidget from './widget/ChatWidget';
 
+function WidgetOnly() {
+  return (
+    <div className="w-full h-full bg-transparent">
+      <ChatWidget />
+    </div>
+  );
+}
+
 function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center text-white p-4">
@@ -17,7 +25,7 @@ function Home() {
         <p className="text-xl text-slate-300">
           Demonstração do Chatbot Omnichannel com IA e RAG.
         </p>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
           <div className="p-6 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
             <h3 className="text-lg font-semibold mb-2 text-blue-300">Widget Demo</h3>
@@ -25,14 +33,14 @@ function Home() {
               Interaja com o botão flutuante no canto inferior direito para testar o fluxo de onboarding.
             </p>
           </div>
-          
+
           <div className="p-6 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
             <h3 className="text-lg font-semibold mb-2 text-emerald-300">Admin Panel</h3>
             <p className="text-sm text-slate-400 mb-4">
               Acesse o painel administrativo para configurar a IA e ver estatísticas.
             </p>
-            <Link 
-              to="/admin/login" 
+            <Link
+              to="/admin/login"
               className="inline-block px-6 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-full text-sm font-medium transition-colors"
             >
               Acessar Admin
@@ -40,7 +48,7 @@ function Home() {
           </div>
         </div>
       </div>
-      
+
       {/* The Widget is always mounted here for demo purposes */}
       <ChatWidget />
     </div>
@@ -52,8 +60,9 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/widget" element={<WidgetOnly />} />
         <Route path="/admin/login" element={<Login />} />
-        
+
         {/* Admin Routes with Layout */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<Dashboard />} />
