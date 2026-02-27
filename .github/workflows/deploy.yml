@@ -18,10 +18,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: 📦 Install dependencies
-        run: npm install
+        run: |
+          rm -f package-lock.json
+          npm install
+          npm install @rollup/rollup-linux-x64-gnu --save-optional
 
       - name: 🏗️ Build frontend (Vite)
         run: npm run build
