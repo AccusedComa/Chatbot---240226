@@ -26,15 +26,12 @@ try {
       whatsapp TEXT,
       full_name TEXT,
       first_name TEXT,
-<<<<<<< HEAD
       current_mode TEXT DEFAULT NULL,
       current_dept TEXT DEFAULT NULL,
       controlled_by TEXT DEFAULT NULL,
       platform TEXT DEFAULT 'web',
       last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       is_read INTEGER DEFAULT 0,
-=======
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -87,7 +84,6 @@ try {
   console.error("Failed to initialize DB tables:", err);
 }
 
-<<<<<<< HEAD
 // Safe migrations for existing DBs
 const migrations = [
   'ALTER TABLE sessions ADD COLUMN full_name TEXT',
@@ -109,6 +105,4 @@ for (const migration of migrations) {
   }
 }
 
-=======
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
 export default db;

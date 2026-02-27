@@ -6,17 +6,20 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem('token', data.token);
@@ -26,6 +29,8 @@ export default function Login() {
       }
     } catch (err) {
       setError('Erro ao conectar');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -46,7 +51,7 @@ export default function Login() {
               type="text"
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => { setUsername(e.target.value); setError(''); }}
               required
             />
           </div>
@@ -56,15 +61,16 @@ export default function Login() {
               type="password"
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
           >
-            Entrar
+            {isLoading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
       </div>

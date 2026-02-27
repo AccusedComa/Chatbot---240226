@@ -4,13 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-<<<<<<< HEAD
     "dev": "npx tsx --watch server.ts",
     "start": "NODE_ENV=production tsx server.ts",
-=======
-    "dev": "tsx server.ts",
-    "start": "tsx server.ts",
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",

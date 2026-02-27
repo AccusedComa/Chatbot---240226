@@ -50,7 +50,6 @@ router.get('/sessions', (req, res) => {
   res.json(sessions);
 });
 
-<<<<<<< HEAD
 router.post('/sessions/:sessionId/read', (req, res) => {
   const { sessionId } = req.params;
   db.prepare('UPDATE sessions SET is_read = 1 WHERE session_id = ?').run(sessionId);
@@ -58,25 +57,28 @@ router.post('/sessions/:sessionId/read', (req, res) => {
 });
 
 // ─── Settings ───────────────────────────────────────────────────────────────
-=======
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
 router.get('/settings', (req, res) => {
   const settings = db.prepare('SELECT * FROM app_settings').all();
   const settingsMap: any = {};
   settings.forEach((s: any) => settingsMap[s.key] = s.value);
-  
+
+  // Fallback to Env
+  if (!settingsMap.gemini_api_key && process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
+    settingsMap.gemini_api_key = process.env.GEMINI_API_KEY;
+  }
+
   // Mask API Key for security
   if (settingsMap.gemini_api_key) {
     settingsMap.gemini_api_key = '********' + settingsMap.gemini_api_key.slice(-4);
   }
-  
+
   res.json(settingsMap);
 });
 
 router.post('/settings', (req, res) => {
   const { key, value } = req.body;
   if (!key || !value) return res.status(400).json({ error: 'Key and value required' });
-  
+
   db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run(key, value);
   res.json({ success: true });
 });
@@ -87,7 +89,7 @@ router.post('/rag/upload', upload.single('file'), async (req, res) => {
 
   try {
     let content = '';
-    
+
     if (req.file.mimetype === 'application/pdf') {
       const data = await pdfParse(req.file.buffer);
       content = data.text;
@@ -102,18 +104,17 @@ router.post('/rag/upload', upload.single('file'), async (req, res) => {
     }
 
     await ragService.ingestDocument(req.file.originalname, content);
-    
+
     res.json({ success: true, message: `File ${req.file.originalname} processed successfully.` });
   } catch (err: any) {
     console.error('Upload error:', err);
     if (err.message.includes('GEMINI_API_KEY is missing')) {
-        return res.status(503).json({ error: 'Sistema de IA não configurado (API Key missing).' });
+      return res.status(503).json({ error: 'Sistema de IA não configurado (API Key missing).' });
     }
     res.status(500).json({ error: err.message });
   }
 });
 
-<<<<<<< HEAD
 // ─── RAG Documents List & Delete ────────────────────────────────────────────
 router.get('/rag/documents', (req, res) => {
   const docs = db.prepare('SELECT id, filename, created_at FROM documents ORDER BY created_at DESC').all();
@@ -189,6 +190,4 @@ router.delete('/rag/documents/:id', (req, res) => {
   res.json({ success: true });
 });
 
-=======
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
 export default router;

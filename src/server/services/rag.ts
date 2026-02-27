@@ -33,22 +33,12 @@ export class RagService {
       return []; // Return empty or throw specific error
     }
     try {
-<<<<<<< HEAD
       // Use embedding-001 as default as it's more widely available across all regions/versions
       const model = ai.getGenerativeModel({ model: "embedding-001" });
       const result = await model.embedContent(text);
 
       if (!result.embedding || !result.embedding.values) {
         throw new Error("No embedding returned");
-=======
-      const result = await ai.models.embedContent({
-        model: "text-embedding-004",
-        contents: { parts: [{ text }] }
-      } as any); 
-      
-      if (!result.embeddings || result.embeddings.length === 0) {
-         throw new Error("No embedding returned");
->>>>>>> 253d226ac800177e6aced0dbf34ab37d53336894
       }
       return result.embedding.values;
     } catch (error) {

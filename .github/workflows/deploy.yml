@@ -1,0 +1,56 @@
+name: 🚀 Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build frontend (Vite)
+        run: npm run build
+
+      - name: 🔐 Setup SSH Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: 🔏 Add VPS to known_hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🚢 Deploy files to VPS (rsync)
+        run: |
+          rsync -avz --delete \
+            --exclude='.env' \
+            --exclude='chatbot.db' \
+            --exclude='whatsapp_auth/' \
+            --exclude='node_modules/' \
+            dist/ src/ server.ts package.json package-lock.json tsconfig.json \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/htdocs/chat.bhseletrica.com.br/
+
+      - name: ⚙️ Install deps & restart app on VPS
+        run: |
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            cd /htdocs/chat.bhseletrica.com.br
+            npm ci --omit=dev
+            pm2 restart bhs-chatbot --update-env 2>/dev/null || \
+              pm2 start "npx tsx server.ts" --name "bhs-chatbot" --env production
+            pm2 save
+          ENDSSH

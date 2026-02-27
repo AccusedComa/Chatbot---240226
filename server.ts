@@ -38,7 +38,7 @@ async function startServer() {
     // For now, we'll serve a placeholder or redirect to the dev server's asset if possible.
     // In production, this would serve the built JS from dist.
     res.type('application/javascript');
-    res.send(`console.log("Widget loaded");`); 
+    res.send(`console.log("Widget loaded");`);
   });
 
   // Vite middleware for development
@@ -51,6 +51,11 @@ async function startServer() {
   } else {
     // Serve static files in production
     app.use(express.static(path.join(__dirname, 'dist')));
+
+    // Fallback for React Router (SPA)
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    });
   }
 
   app.listen(PORT, "0.0.0.0", () => {

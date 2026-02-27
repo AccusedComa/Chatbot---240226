@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Production data (never commit these)
+chatbot.db
+whatsapp_auth/
+chatbot-release.zip

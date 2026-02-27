@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🚀 Deploy Guide — BHS Chatbot</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+  }
+  .container { max-width: 820px; margin: 0 auto; }
+  
+  header { text-align: center; margin-bottom: 48px; }
+  header h1 { font-size: 2.2rem; font-weight: 700; background: linear-gradient(135deg, #60a5fa, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+  header p { color: #94a3b8; font-size: 1rem; }
+
+  .phase { margin-bottom: 12px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.07); background: #1a1f2e; }
+  .phase-header {
+    display: flex; align-items: center; gap: 14px; padding: 18px 24px;
+    cursor: pointer; user-select: none;
+    background: linear-gradient(90deg, rgba(96,165,250,0.08), transparent);
+    transition: background 0.2s;
+  }
+  .phase-header:hover { background: linear-gradient(90deg, rgba(96,165,250,0.15), transparent); }
+  .phase-icon { font-size: 1.4rem; width: 36px; text-align: center; }
+  .phase-title { font-size: 1.1rem; font-weight: 600; flex: 1; }
+  .phase-badge { font-size: 0.7rem; background: rgba(96,165,250,0.2); color: #60a5fa; padding: 3px 8px; border-radius: 20px; border: 1px solid rgba(96,165,250,0.3); white-space: nowrap; }
+  .phase-chevron { color: #94a3b8; font-size: 1rem; transition: transform 0.3s; }
+  .phase-body { padding: 0 24px; overflow: hidden; max-height: 0; transition: max-height 0.4s ease, padding 0.3s; }
+  .phase.open .phase-body { max-height: 9999px; padding: 0 24px 24px; }
+  .phase.open .phase-chevron { transform: rotate(180deg); }
+
+  .step {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+  }
+  .step:last-child { border-bottom: none; }
+  .step-check {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid #60a5fa;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: all 0.2s; margin-top: 2px;
+  }
+  .step.done .step-check { background: #22c55e; border-color: #22c55e; }
+  .step.done .step-content { opacity: 0.5; }
+  .step-content { flex: 1; }
+  .step-label { font-weight: 500; font-size: 0.95rem; margin-bottom: 6px; line-height: 1.4; }
+  .step.done .step-label { text-decoration: line-through; }
+
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+    background: #0d1117; border: 1px solid #30363d;
+    border-radius: 8px; font-size: 0.82rem; color: #79c0ff;
+  }
+  code { padding: 2px 6px; }
+  pre { padding: 14px 16px; margin: 8px 0; overflow-x: auto; position: relative; }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px; background: #21262d; border: 1px solid #30363d;
+    color: #8b949e; border-radius: 6px; padding: 3px 8px; font-size: 0.72rem; cursor: pointer;
+    transition: all 0.2s; font-family: 'Inter', sans-serif;
+  }
+  .copy-btn:hover { background: #30363d; color: #e2e8f0; }
+  .copy-btn.copied { background: #1a4731; color: #3fb950; border-color: #238636; }
+
+  .note { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; color: #fbbf24; margin: 8px 0; }
+  .note.info { background: rgba(96,165,250,0.08); border-color: rgba(96,165,250,0.3); color: #60a5fa; }
+  .note.success { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.3); color: #4ade80; }
+  .note strong { font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85rem; }
+  th { background: rgba(255,255,255,0.05); text-align: left; padding: 8px 12px; color: #94a3b8; font-weight: 500; }
+  td { padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.05); }
+  td:first-child { font-family: 'JetBrains Mono', monospace; color: #ffa657; font-size: 0.8rem; }
+  td:last-child { color: #e2e8f0; }
+
+  .progress-bar { height: 4px; background: #21262d; border-radius: 4px; margin-bottom: 32px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #60a5fa, #34d399); transition: width 0.5s ease; border-radius: 4px; }
+  .progress-label { text-align: right; font-size: 0.78rem; color: #94a3b8; margin-top: 4px; }
+
+  .tag { display: inline-block; font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
+  .tag.ssh { background: rgba(251,113,133,0.15); color: #fb7185; border: 1px solid rgba(251,113,133,0.3); }
+  .tag.github { background: rgba(139,148,158,0.15); color: #8b949e; border: 1px solid rgba(139,148,158,0.3); }
+  .tag.browser { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+  .tag.local { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🚀 Guia de Deploy — BHS Chatbot</h1>
+    <p>Siga os passos abaixo para publicar o chatbot em <strong>chat.bhseletrica.com.br</strong> com CI/CD automático via GitHub.</p>
+  </header>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">0 de 0 etapas concluídas</div>
+
+  <!-- PHASE 1 -->
+  <div class="phase open" id="phase1">
+    <div class="phase-header" onclick="togglePhase('phase1')">
+      <span class="phase-icon">🔑</span>
+      <span class="phase-title">Fase 1 — Chave SSH para deploy automático</span>
+      <span class="phase-badge">No seu PC</span>
+      <span class="phase-chevron">▼</span>
+    </div>
+    <div class="phase-body">
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Gerar par de chaves SSH dedicado para o deploy<span class="tag local">Terminal Local (cmd)</span></div>
+          <pre><code>mkdir %USERPROFILE%\.ssh
+ssh-keygen -t ed25519 -C "github-deploy-bhs" -f %USERPROFILE%\.ssh\bhs_deploy</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+          <div class="note info">Use o <strong>cmd.exe</strong> do Windows (Não PowerShell). Aperte Enter duas vezes quando pedir passphrase (deixe em branco).</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Ver a chave pública gerada<span class="tag local">Terminal Local (cmd)</span></div>
+          <pre><code>type %USERPROFILE%\.ssh\bhs_deploy.pub</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+          <div class="note">Copie todo o output (começa com <code>ssh-ed25519</code>). Vai ser colado no VPS no próximo passo.</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Adicionar chave pública no VPS<span class="tag ssh">SSH no VPS</span></div>
+          <div class="note info">Acesse o VPS via SSH com o usuário <code>bhseletronica-chat</code>:</div>
+          <pre><code>ssh bhseletronica-chat@SEU_IP_VPS</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+          <div class="note info">Depois, cole a chave pública no servidor:</div>
+          <pre><code>mkdir -p ~/.ssh && echo "COLE_SUA_CHAVE_PUBLICA_AQUI" >> ~/.ssh/authorized_keys
+chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Obter conteúdo da chave privada<span class="tag local">Terminal Local (cmd)</span></div>
+          <pre><code>type %USERPROFILE%\.ssh\bhs_deploy</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+          <div class="note">Copie todo o output — começa com <code>-----BEGIN OPENSSH PRIVATE KEY-----</code>. Vai no GitHub no próximo passo.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase" id="phase2">
+    <div class="phase-header" onclick="togglePhase('phase2')">
+      <span class="phase-icon">🐙</span>
+      <span class="phase-title">Fase 2 — Configurar GitHub Secrets</span>
+      <span class="phase-badge">No GitHub</span>
+      <span class="phase-chevron">▼</span>
+    </div>
+    <div class="phase-body">
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Abrir Settings do repositório no GitHub<span class="tag github">GitHub</span></div>
+          <div class="note info">Repositório → <strong>Settings</strong> → <strong>Secrets and variables</strong> → <strong>Actions</strong> → <strong>New repository secret</strong></div>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Adicionar os 3 secrets obrigatórios<span class="tag github">GitHub</span></div>
+          <table>
+            <tr><th>Nome do Secret</th><th>Valor</th></tr>
+            <tr><td>VPS_SSH_KEY</td><td>Conteúdo da chave privada gerada no passo anterior</td></tr>
+            <tr><td>VPS_HOST</td><td>IP do seu VPS Hostinger (ex: 185.234.XXX.XXX)</td></tr>
+            <tr><td>VPS_USER</td><td>bhseletronica-chat</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase" id="phase3">
+    <div class="phase-header" onclick="togglePhase('phase3')">
+      <span class="phase-icon">🖥️</span>
+      <span class="phase-title">Fase 3 — Preparar o VPS (só uma vez)</span>
+      <span class="phase-badge">SSH no VPS</span>
+      <span class="phase-chevron">▼</span>
+    </div>
+    <div class="phase-body">
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Instalar PM2 globalmente<span class="tag ssh">SSH no VPS</span></div>
+          <pre><code>npm install -g pm2
+pm2 startup</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+          <div class="note">Execute o comando que o <code>pm2 startup</code> sugerir com <code>sudo</code>.</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Criar o arquivo .env de produção<span class="tag ssh">SSH no VPS</span></div>
+          <pre><code>nano /htdocs/chat.bhseletrica.com.br/.env</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+          <div class="note info">Cole o conteúdo abaixo e salve (<code>Ctrl+O</code> → <code>Enter</code> → <code>Ctrl+X</code>):</div>
+          <pre><code>GEMINI_API_KEY=sua_chave_gemini_aqui
+APP_URL=https://chat.bhseletrica.com.br
+NODE_ENV=production
+PORT=3002</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Criar a pasta do projeto no VPS<span class="tag ssh">SSH no VPS</span></div>
+          <pre><code>mkdir -p /htdocs/chat.bhseletrica.com.br</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase" id="phase4">
+    <div class="phase-header" onclick="togglePhase('phase4')">
+      <span class="phase-icon">📤</span>
+      <span class="phase-title">Fase 4 — Primeiro deploy manual</span>
+      <span class="phase-badge">No seu PC</span>
+      <span class="phase-chevron">▼</span>
+    </div>
+    <div class="phase-body">
+      <div class="note info">Este passo inicial garante que o servidor tenha todos os arquivos antes do CI/CD assumir.</div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Fazer o commit dos arquivos do projeto<span class="tag local">Terminal Local</span></div>
+          <pre><code>cd c:\Users\Usuário\.gemini\antigravity\scratch\Chatbot-240226
+git add .
+git commit -m "feat: configure CI/CD and production server"
+git push origin main</code><button class="copy-btn" onclick="copyCode(this, event)">Copiar</button></pre>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Acompanhar o deploy no GitHub Actions<span class="tag github">GitHub</span></div>
+          <div class="note info">Acesse no GitHub: <strong>Actions</strong> → você verá o workflow <code>🚀 Deploy to VPS</code> em execução.</div>
+          <div class="note success">Se tudo estiver verde ✅, o chatbot já estará rodando no VPS!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 5 -->
+  <div class="phase" id="phase5">
+    <div class="phase-header" onclick="togglePhase('phase5')">
+      <span class="phase-icon">✅</span>
+      <span class="phase-title">Fase 5 — Verificar e testar</span>
+      <span class="phase-badge">No Browser</span>
+      <span class="phase-chevron">▼</span>
+    </div>
+    <div class="phase-body">
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Verificar que o site carrega<span class="tag browser">Browser</span></div>
+          <div class="note info">Acesse: <a href="https://chat.bhseletrica.com.br" target="_blank" style="color:#60a5fa">https://chat.bhseletrica.com.br</a> — deve aparecer a demo do widget.</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Testar painel Admin<span class="tag browser">Browser</span></div>
+          <div class="note info">Acesse: <a href="https://chat.bhseletrica.com.br/admin/login" target="_blank" style="color:#60a5fa">https://chat.bhseletrica.com.br/admin/login</a></div>
+          <table>
+            <tr><th>Campo</th><th>Valor</th></tr>
+            <tr><td>Usuário</td><td>admin</td></tr>
+            <tr><td>Senha</td><td>admin</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">Testar o fluxo do chatbot no widget</div>
+          <div class="note success">Clique no botão azul no canto inferior direito, preencha nome e WhatsApp, e converse com a IA!</div>
+        </div>
+      </div>
+      <div class="step" onclick="toggleStep(this)">
+        <div class="step-check">✓</div>
+        <div class="step-content">
+          <div class="step-label">🎉 Deploy concluído! CI/CD ativo.</div>
+          <div class="note success">A partir de agora, a cada <code>git push</code> na branch <code>main</code>, o servidor é automaticamente atualizado!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function togglePhase(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  function toggleStep(el) {
+    el.classList.toggle('done');
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const steps = document.querySelectorAll('.step');
+    const done = document.querySelectorAll('.step.done').length;
+    const pct = Math.round((done / steps.length) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `${done} de ${steps.length} etapas concluídas (${pct}%)`;
+  }
+
+  function copyCode(btn, event) {
+    event.stopPropagation();
+    const pre = btn.parentElement;
+    const code = pre.querySelector('code').innerText;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = '✓ Copiado!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  updateProgress();
+</script>
+</body>
+</html>

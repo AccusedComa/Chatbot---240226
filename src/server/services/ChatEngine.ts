@@ -1,8 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
-import db from '../db';
-import { ragService } from './rag';
-import { getApiKey, getGroqApiKey } from '../config';
+import db from '../db.ts';
+import { ragService } from './rag.ts';
+import { getApiKey, getGroqApiKey } from '../config.ts';
 
 export interface ChatResponse {
     response: string;
@@ -73,6 +73,13 @@ class ChatEngine {
 
         // 3. Save user message
         db.prepare('INSERT INTO messages (session_id, sender, content) VALUES (?, ?, ?)').run(sessionId, 'user', message);
+
+        // Escape Hatch: allow user to go back to auto-menu even if under admin control
+        if (session.controlled_by === 'admin' && message.trim().toLowerCase() === 'menu') {
+            console.log(`[ENGINE] User typed 'menu', releasing admin control for session ${sessionId}`);
+            db.prepare("UPDATE sessions SET controlled_by = NULL, current_mode = NULL, current_dept = NULL WHERE session_id = ?").run(sessionId);
+            session.controlled_by = null;
+        }
 
         // Hybrid Control Check
         if (session.controlled_by === 'admin') {
